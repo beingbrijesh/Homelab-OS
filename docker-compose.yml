@@ -1,0 +1,318 @@
+# ==============================================================================
+# Homelab OS (HL-OS) — Open-Source Framework Compose Definition
+# Optimized for: 2015 Dual-Core Intel Celeron & 8GB RAM (Zero AI Overhead)
+# ==============================================================================
+
+networks:
+  homelab:
+    driver: bridge
+
+volumes:
+  nextcloud_data:
+  mariadb_data:
+  redis_data:
+  pihole_data:
+  pihole_dnsmasq:
+
+services:
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 1. PI-HOLE — Network-wide DNS Ad-blocking & Local Domain Resolution
+  # ──────────────────────────────────────────────────────────────────────────
+  pihole:
+    image: pihole/pihole:latest
+    container_name: pihole
+    restart: unless-stopped
+    networks: [homelab]
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+      - "${PIHOLE_WEB_PORT:-8080}:80"
+    volumes:
+      - pihole_data:/etc/pihole
+      - pihole_dnsmasq:/etc/dnsmasq.d
+    environment:
+      TZ: ${TZ:-UTC}
+      WEBPASSWORD: ${PIHOLE_PASSWORD}
+      PIHOLE_DNS_: 1.1.1.1;8.8.8.8
+      DNSMASQ_LISTENING: all
+    cap_add:
+      - NET_ADMIN
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: "0.5"
+    cpu_shares: 1024  # Highest priority: DNS lookups must resolve instantly (<5ms)
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 2. NGINX PROXY MANAGER — Ingress, SSL Termination & Local Virtual Hosts
+  # ──────────────────────────────────────────────────────────────────────────
+  nginx-proxy:
+    image: jc21/nginx-proxy-manager:latest
+    container_name: nginx-proxy
+    restart: unless-stopped
+    networks: [homelab]
+    ports:
+      - "80:80"
+      - "443:443"
+      - "81:81"
+    volumes:
+      - ./nginx/data:/data
+      - ./nginx/letsencrypt:/etc/letsencrypt
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: "0.4"
+    cpu_shares: 768
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 3. FASTAPI ADMIN DASHBOARD — Central Control Plane & Telemetry
+  # ──────────────────────────────────────────────────────────────────────────
+  admin-dashboard:
+    build:
+      context: ./admin-dashboard
+      dockerfile: Dockerfile
+    container_name: admin-dashboard
+    security_opt:
+      - apparmor:unconfined
+    restart: unless-stopped
+    ports:
+      - "${DASHBOARD_PORT:-5001}:5001"
+      - "${NEXTCLOUD_PORT:-8081}:8081"
+      - "${NAVIDROME_PORT:-4533}:4533"
+      - "${MALOJA_PORT:-42010}:42010"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./admin-dashboard/data:/app/data
+      - ./admin-dashboard/scripts:/scripts:ro
+      - ./admin-dashboard/logs:/logs
+      - ${STORAGE_PATH:-/mnt/backup}:/mnt/backup
+      - /proc:/host_proc:ro
+      - /sys/class/power_supply:/sys/class/power_supply:ro
+      - ${MALOJA_DATA_PATH:-./maloja/data}:/maloja:ro
+    environment:
+      - DASHBOARD_PORT=5001
+      - NEXTCLOUD_PORT=${NEXTCLOUD_PORT:-8081}
+      - NAVIDROME_PORT=${NAVIDROME_PORT:-4533}
+      - MALOJA_PORT=${MALOJA_PORT:-42010}
+      - WAKE_PROXY_ENABLED=${WAKE_PROXY_ENABLED:-true}
+      - DASHBOARD_SECRET=${DASHBOARD_SECRET}
+      - ADMIN_DEFAULT_USER=${ADMIN_DEFAULT_USER:-admin}
+      - ADMIN_DEFAULT_PASSWORD=${ADMIN_DEFAULT_PASSWORD:-admin123}
+      - FORCE_HTTPS=${FORCE_HTTPS:-false}
+      - BACKUP_SCRIPT=/scripts/backup.sh
+      - BACKUP_LOG=/logs/backup.log
+      - BACKUP_MOUNT=${STORAGE_PATH:-/mnt/backup}
+      - MUSIC_DIR=${STORAGE_PATH:-/mnt/backup}/music
+      - PLAYLIST_DIR=${STORAGE_PATH:-/mnt/backup}/music/_playlists
+      - NAVIDROME_URL=http://admin-dashboard:4533
+      - NET_IFACE=${NET_IFACE:-eth0}
+      - PROCFS_PATH=/host_proc
+      - MALOJA_DB_PATH=/maloja/malojadb.sqlite
+      - CLOUDFLARE_ZERO_TRUST_ENABLED=${CLOUDFLARE_ZERO_TRUST_ENABLED:-false}
+      - ALLOWED_ZERO_TRUST_EMAILS=${ALLOWED_ZERO_TRUST_EMAILS:-}
+      - ZERO_TRUST_BYPASS_LOCAL=${ZERO_TRUST_BYPASS_LOCAL:-true}
+    networks:
+      - homelab
+    deploy:
+      resources:
+        limits:
+          memory: 180M
+          cpus: "0.5"
+    cpu_shares: 512
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 4. SAMBA (SMB) — Resilient Device Storage File Sharing over Private VPN
+  # ──────────────────────────────────────────────────────────────────────────
+  samba:
+    image: dperson/samba:latest
+    container_name: samba
+    restart: unless-stopped
+    networks: [homelab]
+    expose:
+      - "139"
+      - "445"
+    volumes:
+      - ${SAMBA_SHARE_PATH:-/mnt/backup}:/share
+    environment:
+      - TZ=${TZ:-UTC}
+      - USERID=1000
+      - GROUPID=1000
+    command:
+      - "-p"
+      - "-g"
+      - "server min protocol = SMB2_10"
+      - "-g"
+      - "durable handles = yes"
+      - "-g"
+      - "smb2 leases = yes"
+      - "-g"
+      - "deadtime = 15"
+      - "-g"
+      - "vfs objects = catia fruit streams_xattr"
+      - "-g"
+      - "fruit:metadata = stream"
+      - "-g"
+      - "fruit:model = Macmini"
+      - "-u"
+      - "${SAMBA_USER:-homelab};${SAMBA_PASSWORD:-changeme}"
+      - "-s"
+      - "Storage;/share;yes;no;no;${SAMBA_USER:-homelab}"
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: "0.5"
+    cpu_shares: 512
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 5. MARIADB — High-Performance Nextcloud Relational Database
+  # ──────────────────────────────────────────────────────────────────────────
+  mariadb:
+    image: mariadb:10.11
+    container_name: mariadb
+    restart: unless-stopped
+    networks: [homelab]
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-nextcloud}
+      MYSQL_USER: ${MYSQL_USER:-nextcloud}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    command: >
+      --transaction-isolation=READ-COMMITTED
+      --binlog-format=ROW
+      --innodb-buffer-pool-size=256M
+      --innodb-log-buffer-size=16M
+      --max-connections=100
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "0.7"
+    cpu_shares: 512
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 6. REDIS — In-Memory Caching & Session Locking
+  # ──────────────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    restart: unless-stopped
+    networks: [homelab]
+    volumes:
+      - redis_data:/data
+    command: >
+      redis-server
+      --requirepass ${REDIS_PASSWORD}
+      --maxmemory 48mb
+      --maxmemory-policy allkeys-lru
+      --save ""
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+          cpus: "0.3"
+    cpu_shares: 512
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 7. NEXTCLOUD — Private Cloud Storage & Web Workspace
+  # ──────────────────────────────────────────────────────────────────────────
+  nextcloud:
+    image: nextcloud:34-apache
+    container_name: nextcloud
+    restart: unless-stopped
+    networks: [homelab]
+    depends_on: [mariadb, redis]
+    expose:
+      - "80"
+    volumes:
+      - nextcloud_data:/var/www/html
+      - ./nextcloud/data:/var/www/html/data
+      - ./nextcloud/config:/var/www/html/config
+      - ./nextcloud/apps:/var/www/html/custom_apps
+    environment:
+      MYSQL_HOST: mariadb
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-nextcloud}
+      MYSQL_USER: ${MYSQL_USER:-nextcloud}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_HOST_PASSWORD: ${REDIS_PASSWORD}
+      NEXTCLOUD_ADMIN_USER: ${NEXTCLOUD_ADMIN_USER:-admin}
+      NEXTCLOUD_ADMIN_PASSWORD: ${NEXTCLOUD_ADMIN_PASSWORD}
+      NEXTCLOUD_TRUSTED_DOMAINS: ${NEXTCLOUD_TRUSTED_DOMAINS:-localhost 127.0.0.1}
+      PHP_MEMORY_LIMIT: 384M
+      PHP_UPLOAD_LIMIT: 2G
+      TZ: ${TZ:-UTC}
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "0.7"
+    cpu_shares: 512
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 8. NAVIDROME — High-Efficiency Subsonic Music Streamer (Go Binary)
+  # ──────────────────────────────────────────────────────────────────────────
+  navidrome:
+    image: deluan/navidrome:latest
+    container_name: navidrome
+    restart: unless-stopped
+    expose:
+      - "4533"
+    volumes:
+      - ./navidrome/data:/data
+      - ${STORAGE_PATH:-/mnt/backup}/music:/music:ro
+    environment:
+      - ND_SCANSCHEDULE=@every 1h
+      - ND_LOGLEVEL=info
+      - ND_SESSIONTIMEOUT=24h
+      - ND_MUSICFOLDER=/music
+      - ND_DATAFOLDER=/data
+      - ND_LISTENBRAINZ_ENABLED=true
+      - ND_LISTENBRAINZ_BASEURL=http://admin-dashboard:42010/apis/listenbrainz/1/
+      - ND_LASTFM_ENABLED=true
+      - ND_LASTFM_BASEURL=http://admin-dashboard:42010/apis/lastfm
+      - ND_LASTFM_APIKEY=${MALOJA_API_KEY:-}
+      - ND_LASTFM_SECRET=${MALOJA_API_SECRET:-bypass}
+    networks:
+      - homelab
+    deploy:
+      resources:
+        limits:
+          memory: 300M
+          cpus: "0.4"
+    cpu_shares: 256
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 9. MALOJA — Self-Hosted Music Scrobbler & Listening Analytics
+  # ──────────────────────────────────────────────────────────────────────────
+  maloja:
+    image: krateng/maloja:3.2.4
+    container_name: maloja
+    restart: unless-stopped
+    expose:
+      - "42010"
+    volumes:
+      - ${MALOJA_DATA_PATH:-./maloja/data}:/data
+      - ./config/maloja/_base_patched.py:/usr/src/app/maloja/apis/_base.py:ro
+      - ./config/maloja/_base_patched.py:/venv/lib/python3.12/site-packages/maloja/apis/_base.py:ro
+    environment:
+      - MALOJA_SKIP_SETUP=true
+      - MALOJA_SEND_STATS=false
+      - MALOJA_ADMINPW=${MALOJA_ADMIN_PASSWORD:-}
+      - MALOJA_DATA_DIRECTORY=/data
+      - MALOJA_FORCE_PASSWORD=${MALOJA_ADMIN_PASSWORD:-}
+      - PUID=1000
+      - PGID=1000
+    networks:
+      - homelab
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: "0.4"
+    cpu_shares: 256

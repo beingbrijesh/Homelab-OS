@@ -1,0 +1,61 @@
+# Secrets & local environment
+.env
+.env.*
+!.env.example
+
+# Runtime databases, logs & persistent container volumes
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+*.log
+*.bak
+*.bak.*
+*.tmp
+*.orig
+
+admin-dashboard/data/
+admin-dashboard/logs/
+nextcloud/data/
+nextcloud/config/
+nextcloud/apps/
+mariadb/
+maloja/
+navidrome/
+nginx/
+pihole/
+redis/
+snapshots/
+storage/
+
+# Keep tracked templates & config assets
+!config/
+!config/**
+!nextcloud/low_spec_tuning.config.php
+
+# OS & Python test caches
+.DS_Store
+._*
+**/._*
+__pycache__/
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+**/.pytest_cache/
+pytest-cache-files-*/
+.coverage
+htmlcov/
+
+# Packaging & build outputs
+/dist/
+/build/
+*.egg-info/
+homelab_os/bundle/
+node_modules/
+**/node_modules/
+*.tgz
+.ci-venv/
+.ci-ws/
+!admin-dashboard/static/dist/
+!admin-dashboard/static/dist/**

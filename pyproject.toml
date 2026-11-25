@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "homelab-os"
+version = "2.0.0"
+description = "Turnkey personal cloud, SMB3 durable file server, Pi-hole DNS, and resilient media engine CLI for Linux, macOS, and Windows."
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.9"
+authors = [
+  { name = "Homelab OS Contributors" }
+]
+keywords = ["homelab", "docker", "self-hosted", "nextcloud", "pihole", "navidrome", "samba", "cli"]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Intended Audience :: System Administrators",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: System :: Systems Administration",
+]
+dependencies = []
+
+[project.scripts]
+homelab = "homelab_os.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/beingbrijesh/homelab-framework"
+Repository = "https://github.com/beingbrijesh/homelab-framework"
+Issues = "https://github.com/beingbrijesh/homelab-framework/issues"
+
+[tool.setuptools]
+packages = ["homelab_os"]
+include-package-data = true

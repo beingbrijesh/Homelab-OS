@@ -1,0 +1,47 @@
+{
+  "name": "homelab-os",
+  "version": "2.0.0",
+  "description": "Turnkey personal cloud, SMB3 durable file server, Pi-hole DNS, and resilient media engine CLI for Linux, macOS, and Windows.",
+  "bin": {
+    "homelab": "./bin/homelab.js",
+    "homelab-os": "./bin/homelab.js"
+  },
+  "files": [
+    "bin/",
+    "homelab_os/",
+    "docker-compose.yml",
+    ".env.example",
+    "admin-dashboard/",
+    "config/",
+    "nextcloud/",
+    "scripts/",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "homelab",
+    "docker",
+    "self-hosted",
+    "nextcloud",
+    "pihole",
+    "navidrome",
+    "samba",
+    "cli"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/beingbrijesh/homelab-framework.git"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "os": [
+    "linux",
+    "darwin",
+    "win32"
+  ],
+  "scripts": {
+    "test": "python3 -m pytest tests/ -v"
+  }
+}

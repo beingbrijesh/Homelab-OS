@@ -1,0 +1,39 @@
+{
+  "version": "2.0.0",
+  "description": "Turnkey personal cloud, SMB3 durable file server, Pi-hole DNS, and resilient media engine CLI.",
+  "homepage": "https://github.com/beingbrijesh/homelab-framework",
+  "license": "MIT",
+  "depends": [
+    "python",
+    "docker",
+    "docker-compose",
+    "git",
+    "openssl",
+    "tailscale"
+  ],
+  "url": "https://files.pythonhosted.org/packages/py3/h/homelab-os/homelab_os-2.0.0-py3-none-any.whl#/homelab_os.zip",
+  "hash": "REPLACE_WITH_PYPI_WHEEL_SHA256_ON_RELEASE",
+  "installer": {
+    "script": [
+      "python -m venv \"$dir\\venv\"",
+      "& \"$dir\\venv\\Scripts\\pip.exe\" install --no-deps --force-reinstall \"$dir\\homelab_os.zip\" | Out-Null",
+      "Remove-Item \"$dir\\homelab_os.zip\" -Force -ErrorAction SilentlyContinue"
+    ]
+  },
+  "bin": [
+    [
+      "venv\\Scripts\\homelab.exe",
+      "homelab"
+    ]
+  ],
+  "notes": [
+    "Run 'homelab doctor' to check Docker Desktop & Windows SMB port 445 before 'homelab init -y --start'."
+  ],
+  "checkver": {
+    "url": "https://pypi.org/pypi/homelab-os/json",
+    "jsonpath": "$.info.version"
+  },
+  "autoupdate": {
+    "url": "https://files.pythonhosted.org/packages/py3/h/homelab-os/homelab_os-$version-py3-none-any.whl#/homelab_os.zip"
+  }
+}

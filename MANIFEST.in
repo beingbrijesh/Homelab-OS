@@ -1,0 +1,13 @@
+include README.md LICENSE ARCHITECTURE.md CONTRIBUTING.md
+include docker-compose.yml .env.example .dockerignore
+recursive-include admin-dashboard Dockerfile requirements.txt app.py ops_resources.py ops_updates.py .dockerignore
+recursive-include admin-dashboard/scripts *.sh
+recursive-include admin-dashboard/static *
+recursive-include admin-dashboard/frontend *
+recursive-include config *
+recursive-include nextcloud *.php
+recursive-include scripts *.sh *.py *.ps1
+prune admin-dashboard/data
+prune admin-dashboard/logs
+prune admin-dashboard/frontend/node_modules
+global-exclude __pycache__ *.py[cod] *.db *.sqlite* *.log .env .DS_Store ._*
