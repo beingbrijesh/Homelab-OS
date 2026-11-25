@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+*.db
+*.sqlite
+*.log
+.git/
+.pytest_cache/
+data/
+logs/
+templates/
+frontend/node_modules/
+static/dist/
+requirements-dev.txt
+.DS_Store

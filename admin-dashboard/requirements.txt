@@ -1,0 +1,10 @@
+fastapi==0.111.0
+uvicorn==0.30.1
+starlette==0.37.2
+pydantic==2.7.4
+python-multipart==0.0.9
+itsdangerous==2.2.0
+docker==7.1.0
+psutil==5.9.8
+werkzeug>=3.0.0
+yt-dlp>=2024.04.09
