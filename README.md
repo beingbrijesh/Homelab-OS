@@ -3,11 +3,31 @@
 > **Turnkey Personal Cloud, Durable File Sharing & Resilient Media Engine**  
 > *Engineered for low-power hardware (2-Core Celeron / 4–8GB RAM) up to modern dedicated servers.*
 
+[![CI](https://github.com/beingbrijesh/Homelab-OS/actions/workflows/ci.yml/badge.svg)](https://github.com/beingbrijesh/Homelab-OS/actions/workflows/ci.yml)
 [![Python 3.11](https://img.shields.io/badge/Python-3.11-3776AB.svg?style=flat&logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688.svg?style=flat&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![Docker Compose](https://img.shields.io/badge/Docker_Compose-v2+-2496ED.svg?style=flat&logo=docker&logoColor=white)](https://docs.docker.com/compose/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Zero AI Overhead](https://img.shields.io/badge/AI_Overhead-0%25_CPU-success.svg)](#architecture--memory-budget)
+
+---
+
+## 📚 Documentation Hub
+
+Explore the comprehensive Homelab OS documentation suite:
+
+| Document | Purpose & Description |
+| :--- | :--- |
+| **[🚀 Getting Started Guide](docs/GETTING_STARTED.md)** | Step-by-step installation, hardware sizing, client device setup, and first-time configuration. |
+| **[🏗️ System Architecture](docs/ARCHITECTURE.md)** | C4 Container diagrams, resource constraints, network perimeter, and low-spec optimization rationale. |
+| **[📦 Service Catalog](docs/SERVICES.md)** | Complete breakdown of all 9 container services with ports, volume mappings, and tuning parameters. |
+| **[🔌 REST API Reference](docs/API_REFERENCE.md)** | Interactive FastAPI schemas, authentication endpoints, download queues, and system event contracts. |
+| **[🛠️ Operations & Runbooks](docs/OPERATIONS.md)** | Day-2 operations: atomic SQLite backups, disaster recovery drills, updates, and eco-sleep power states. |
+| **[🔍 Troubleshooting Guide](docs/TROUBLESHOOTING.md)** | Decision trees and diagnostic commands for port conflicts, container crashloops, and network issues. |
+| **[🔒 Security Policy](SECURITY.md)** | Supported versions, threat model, and vulnerability reporting procedures. |
+| **[📋 Release Notes](CHANGELOG.md)** | Semantic version log, v2.0.0 architectural overhaul notes, and migration instructions. |
+
+---
 
 ---
 
