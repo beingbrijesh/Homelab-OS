@@ -159,6 +159,26 @@ def test_init_aborts_before_creating_workspace_when_deps_fail(tmp_path, monkeypa
     assert not (target_dir / ".env").exists()
 
 
+def test_init_skip_deps_flag_bypasses_dependency_gate(tmp_path, monkeypatch):
+    from homelab_os import cli
+    from homelab_os.deps import DependencyStatus
+
+    target_dir = tmp_path / "skip-deps-ws"
+    # Even if all dependencies are reported missing, --skip-deps allows provisioning
+    monkeypatch.setattr(
+        "homelab_os.deps.check_dependencies",
+        lambda skip_daemon=False, which_fn=None, os_name=None: [
+            DependencyStatus(name="python", required=True, ok=False, detail="missing"),
+            DependencyStatus(name="docker", required=True, ok=False, detail="missing"),
+            DependencyStatus(name="tailscale", required=True, ok=False, detail="missing"),
+        ],
+    )
+    rc = cli.main(["init", "-y", "--skip-deps", "--dir", str(target_dir)])
+    assert rc == 0
+    assert (target_dir / "docker-compose.yml").exists()
+    assert (target_dir / ".env").exists()
+
+
 def test_init_provisions_workspace_and_env_with_valid_deps(tmp_path, monkeypatch):
     import re
     from homelab_os import cli

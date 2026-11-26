@@ -1957,7 +1957,8 @@ async def api_cancel_download(jid: int, admin: str = Depends(login_required)):
                 time.sleep(0.1)
                 try:
                     os.kill(pid, 0)
-                    os.kill(pid, signal.SIGKILL)
+                    sig_kill = getattr(signal, "SIGKILL", signal.SIGTERM)
+                    os.kill(pid, sig_kill)
                 except (ProcessLookupError, PermissionError):
                     pass
             except (ProcessLookupError, PermissionError):

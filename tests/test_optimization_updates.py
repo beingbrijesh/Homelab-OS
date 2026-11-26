@@ -48,7 +48,8 @@ def client_env():
     orig_pl = getattr(app_module, "PLAYLIST_DIR", "")
     orig_docker = app_module.docker_client
 
-    with tempfile.TemporaryDirectory() as tmpdir:
+    td_kwargs = {"ignore_cleanup_errors": True} if sys.version_info >= (3, 10) else {}
+    with tempfile.TemporaryDirectory(**td_kwargs) as tmpdir:
         test_db = os.path.join(tmpdir, "test_v21.db")
         music_dir = os.path.join(tmpdir, "music")
         pl_dir = os.path.join(music_dir, "_playlists")
@@ -70,7 +71,12 @@ def client_env():
             },
         )
         assert res.status_code == 303
-        yield client, test_db, music_dir, pl_dir
+        try:
+            yield client, test_db, music_dir, pl_dir
+        finally:
+            client.close()
+            import gc
+            gc.collect()
 
     app_module.DB_PATH = orig_db
     app_module.MUSIC_DIR = orig_music
@@ -1248,7 +1254,7 @@ def test_ytdlp_version_detection_and_container_backup_snapshot(client_env, tmp_p
     assert os.path.isfile(os.path.join(snap_dir, "nextcloud_config.php"))
     assert os.path.isfile(os.path.join(snap_dir, "nextcloud_apps.txt"))
     assert os.path.isfile(os.path.join(snap_dir, "dashboard", "dashboard.db"))
-    assert "MariaDB container is not running" not in open(bk_log).read()
+    assert "MariaDB container is not running" not in open(bk_log, encoding="utf-8").read()
 
 
 def test_wait_nextcloud_ready_waits_for_apache_port_even_when_occ_returns_early():
@@ -1473,9 +1479,17 @@ def test_stale_running_job_recovery_and_force_cancel_and_subprogress(client_env)
 
     def fake_recreate(dc, name, progress_fn=None, is_cancelled_fn=None):
         progress_fn(35, "Pulling", "Pulling...")
-        seen_pcts.append(app_module.get_db().execute("SELECT progress_pct FROM update_jobs WHERE id=?", (all_id,)).fetchone()["progress_pct"])
+        db1 = app_module.get_db()
+        try:
+            seen_pcts.append(db1.execute("SELECT progress_pct FROM update_jobs WHERE id=?", (all_id,)).fetchone()["progress_pct"])
+        finally:
+            db1.close()
         progress_fn(60, "Pulling (100%)", "Pulling 100%")
-        seen_pcts.append(app_module.get_db().execute("SELECT progress_pct FROM update_jobs WHERE id=?", (all_id,)).fetchone()["progress_pct"])
+        db2 = app_module.get_db()
+        try:
+            seen_pcts.append(db2.execute("SELECT progress_pct FROM update_jobs WHERE id=?", (all_id,)).fetchone()["progress_pct"])
+        finally:
+            db2.close()
         return True, "Updated"
 
     with patch("ops_updates.check_all_updates", return_value=cached), \

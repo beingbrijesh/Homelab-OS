@@ -89,17 +89,18 @@ def cmd_doctor(args: argparse.Namespace) -> int:
 
 def cmd_init(args: argparse.Namespace) -> int:
     # MANDATORY GATE: Verify & auto-install all required dependencies BEFORE codebase setup!
-    ok, _ = ensure_dependencies(
-        auto_install=(not args.no_install_deps),
-        interactive=(not args.yes),
-        skip_daemon=args.skip_daemon_check,
-    )
-    if not ok:
-        print(
-            "\n[ABORTED] Homelab OS workspace/codebase setup blocked until all required dependencies are installed and running.",
-            file=sys.stderr,
+    if not getattr(args, "skip_deps", False):
+        ok, _ = ensure_dependencies(
+            auto_install=(not args.no_install_deps),
+            interactive=(not args.yes),
+            skip_daemon=args.skip_daemon_check,
         )
-        return 1
+        if not ok:
+            print(
+                "\n[ABORTED] Homelab OS workspace/codebase setup blocked until all required dependencies are installed and running.",
+                file=sys.stderr,
+            )
+            return 1
 
     workspace = resolve_workspace_dir(args.dir, for_init=True)
     bundle_dir = resolve_bundle_dir()
@@ -295,6 +296,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_init.add_argument("--start", action="store_true", help="Build and start all containers after setup")
     p_init.add_argument("--force", action="store_true", help="Overwrite existing .env cleanly (creates backup)")
     p_init.add_argument("--no-install-deps", action="store_true", help="Fail instead of auto-installing missing dependencies")
+    p_init.add_argument("--skip-deps", action="store_true", help="Skip dependency verification gate (CI/testing mode)")
     p_init.add_argument("--skip-daemon-check", action="store_true", help="Check CLI presence without requiring running Docker daemon")
     p_init.add_argument("--storage", default="./storage", help="Storage directory for music, shares & snapshots")
     p_init.add_argument("--domain", default="homelab.local", help="Primary domain or hostname")

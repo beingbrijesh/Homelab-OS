@@ -39,10 +39,10 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
 
       - name: Publish to npm
-        if: ${{ secrets.NPM_TOKEN != '' }}
-        run: npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        if: env.NODE_AUTH_TOKEN != ''
+        run: npm publish --provenance --access public
 
       - name: Compute checksums & create GitHub Release
         run: |

@@ -42,11 +42,11 @@ jobs:
           if [ "${{ runner.os }}" = "Windows" ]; then
             .ci-venv/Scripts/pip install dist/*.whl
             .ci-venv/Scripts/homelab --version
-            .ci-venv/Scripts/homelab init -y --skip-daemon-check --no-install-deps --dir .ci-ws
+            .ci-venv/Scripts/homelab init -y --skip-daemon-check --skip-deps --dir .ci-ws
           else
             .ci-venv/bin/pip install dist/*.whl
             .ci-venv/bin/homelab --version
-            .ci-venv/bin/homelab init -y --skip-daemon-check --no-install-deps --dir .ci-ws
+            .ci-venv/bin/homelab init -y --skip-daemon-check --skip-deps --dir .ci-ws
           fi
           test -f .ci-ws/.env
           test -f .ci-ws/docker-compose.yml

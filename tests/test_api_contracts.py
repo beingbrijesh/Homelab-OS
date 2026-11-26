@@ -39,7 +39,8 @@ def _fetch_spa_bundle(client):
 @pytest.fixture(scope="module")
 def test_env():
     """Sets up an isolated SQLite database and test client."""
-    with tempfile.TemporaryDirectory() as tmpdir:
+    td_kwargs = {"ignore_cleanup_errors": True} if sys.version_info >= (3, 10) else {}
+    with tempfile.TemporaryDirectory(**td_kwargs) as tmpdir:
         test_db = os.path.join(tmpdir, "test_dashboard.db")
         app_module.DB_PATH = test_db
         app_module.init_db()
@@ -53,7 +54,12 @@ def test_env():
         db.close()
 
         client = TestClient(app_module.app, follow_redirects=False)
-        yield client, test_db
+        try:
+            yield client, test_db
+        finally:
+            client.close()
+            import gc
+            gc.collect()
 
 def test_pwa_static_assets(test_env):
     """Verify PWA manifest and service worker are served properly."""
