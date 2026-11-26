@@ -1953,15 +1953,14 @@ async def api_cancel_download(jid: int, admin: str = Depends(login_required)):
     if status_val in ("queued", "downloading"):
         if pid > 0:
             try:
-                os.kill(pid, signal.SIGTERM)
-                time.sleep(0.1)
-                try:
-                    os.kill(pid, 0)
-                    sig_kill = getattr(signal, "SIGKILL", signal.SIGTERM)
-                    os.kill(pid, sig_kill)
-                except (ProcessLookupError, PermissionError):
-                    pass
-            except (ProcessLookupError, PermissionError):
+                if psutil.pid_exists(pid):
+                    proc = psutil.Process(pid)
+                    proc.terminate()
+                    try:
+                        proc.wait(timeout=0.2)
+                    except (psutil.TimeoutExpired, psutil.NoSuchProcess):
+                        proc.kill()
+            except (psutil.NoSuchProcess, psutil.AccessDenied, Exception):
                 pass
         
         now = datetime.utcnow().isoformat()
