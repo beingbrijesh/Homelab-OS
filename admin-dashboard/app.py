@@ -1228,13 +1228,13 @@ def _run_download(
     rate_limit: str = "",
     archive_skip: bool = True,
 ):
-    def upd(**kw):
+    def upd(**kw) -> bool:
         try:
             db = get_db()
             row = db.execute("SELECT status FROM download_queue WHERE id=?", (job_id,)).fetchone()
-            if row and row["status"] == "cancelled" and kw.get("status") != "cancelled":
+            if not row or (row["status"] == "cancelled" and kw.get("status") != "cancelled"):
                 db.close()
-                return
+                return False
             fields = [f"{k}=?" for k in kw]
             vals = list(kw.values())
             if kw.get("status") in ("completed", "failed", "cancelled"):
@@ -1244,8 +1244,9 @@ def _run_download(
                 db.execute(f"UPDATE download_queue SET {','.join(fields)} WHERE id=?", (*vals, job_id))
                 db.commit()
             db.close()
+            return True
         except Exception:
-            pass
+            return False
 
     # Quick check if cancelled or removed before running
     db = get_db()
@@ -1255,7 +1256,8 @@ def _run_download(
         return
 
     audio_fmt, _ = resolve_audio_format(quality)
-    upd(status="downloading", format=audio_fmt, current_track_pct=0)
+    if not upd(status="downloading", format=audio_fmt, current_track_pct=0):
+        return
     try:
         os.makedirs(music_dir, exist_ok=True)
     except Exception as e:
@@ -1948,26 +1950,23 @@ async def api_cancel_download(jid: int, admin: str = Depends(login_required)):
         return JSONResponse({"error": "Job not found"}, status_code=404)
 
     pid = row["pid"] or 0
-    status_val = row["status"]
-    
-    if status_val in ("queued", "downloading"):
-        if pid > 0:
-            try:
-                if psutil.pid_exists(pid):
-                    proc = psutil.Process(pid)
-                    proc.terminate()
-                    try:
-                        proc.wait(timeout=0.2)
-                    except (psutil.TimeoutExpired, psutil.NoSuchProcess):
-                        proc.kill()
-            except (psutil.NoSuchProcess, psutil.AccessDenied, Exception):
-                pass
-        
-        now = datetime.utcnow().isoformat()
-        db.execute("UPDATE download_queue SET status='cancelled', completed_at=? WHERE id=?", (now, jid))
-        db.commit()
-    
+    now = datetime.utcnow().isoformat()
+    db.execute("UPDATE download_queue SET status='cancelled', completed_at=? WHERE id=?", (now, jid))
+    db.commit()
     db.close()
+
+    if pid > 0:
+        try:
+            if psutil.pid_exists(pid):
+                proc = psutil.Process(pid)
+                proc.terminate()
+                try:
+                    proc.wait(timeout=0.2)
+                except (psutil.TimeoutExpired, psutil.NoSuchProcess):
+                    proc.kill()
+        except (psutil.NoSuchProcess, psutil.AccessDenied, Exception):
+            pass
+
     return {"ok": True}
 
 @app.post("/api/music/queue/{jid}/retry")
